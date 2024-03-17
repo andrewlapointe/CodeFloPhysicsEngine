@@ -8,7 +8,7 @@ class MyGame(arcade.Window):
 
         arcade.set_background_color(arcade.color.GRAY_BLUE)
 
-        self.sprite_list = []
+        self.sprite_list = None
         self.engine = engine.Engine()
 
     def setup(self):
@@ -21,16 +21,25 @@ class MyGame(arcade.Window):
         """
         Render the screen.
         """
+
         # This command should happen before we start drawing. It will clear
         # the screen to the background color, and erase what we drew last frame
         self.clear()
 
         # Call draw() on all your sprite lists below
         for sprite in self.sprite_list:
-            sprite.draw()
+            arcade.draw_circle_outline(sprite.get_x(), sprite.get_y(), sprite.smoothing_radius, [0,0,0], 1)
+            arcade.draw_point(sprite.get_x(), sprite.get_y(), [0,0,100], 5 * sprite.scale)
+        # self.draw_quad()
+        
 
-        arcade.draw_text(f"y = {self.sprite_list[0].get_y_pos()}", 10, 10, arcade.color.WHITE, 12, 20, "left")
-        arcade.draw_text(f"x = {self.sprite_list[0].get_x_pos()}", 10, 25, arcade.color.WHITE, 12, 20, "left")
+        # arcade.draw_text(f"y = {self.sprite_list[0].get_y()}", 10, 10, arcade.color.WHITE, 12, 20, "left")
+        # arcade.draw_text(f"x = {self.sprite_list[0].get_x()}", 10, 25, arcade.color.WHITE, 12, 20, "left")
+        arcade.draw_text(f"Near Particles = {len(self.sprite_list[0].near_particles)}", 10, 40, arcade.color.WHITE, 12, 20, "left")
+
+    def draw_quad(self):
+        for i in self.engine.quad_tree.grid_list:
+            arcade.draw_lines(point_list=i, color=[0,0,0], line_width=1)
 
 
     def on_update(self, time_step):

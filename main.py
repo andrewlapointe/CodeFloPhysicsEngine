@@ -1,12 +1,18 @@
-import arcade
-import graphics
+from graphics_v2 import *
+from physics_v2 import *
 
-# CONSTANTS
-SCREEN_TITLE = "CodeFlo"
-SCREEN_HEIGHT = 600
-SCREEN_WIDTH = 800
 
+def main():
+    pygame.init()
+    display = (800, 600)
+    pygame.display.set_mode(display, DOUBLEBUF|OPENGL)
+    gluPerspective(45, (display[0]/display[1]), 0.1, 50.0)
+    glTranslatef(0.0, 0.0, -5)
+
+    graphics_handler = Graphics()
+    graphics_handler.graphics_setup()
+    graphics_handler.event_loop()
+
+  
 if __name__ == "__main__":
-    game = graphics.MyGame(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
-    game.setup()
-    arcade.run()
+    main()
