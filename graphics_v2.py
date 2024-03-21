@@ -23,7 +23,10 @@ class Graphics():
         """Draw particles in the scene."""
         glBegin(GL_POINTS)
         for particle in self.engine.particle_list:
-            glVertex3fv(particle.position)
+            if particle.draw:
+                # if particle.move:
+                # glColor3f(255,0,0)
+                glVertex3fv(particle.position)
         glEnd()
 
 

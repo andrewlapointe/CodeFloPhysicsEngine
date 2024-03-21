@@ -1,26 +1,41 @@
 import numpy as np
 import math
+from scipy.spatial import cKDTree
 from physics_v2 import particle as p
+from physics_v2 import spacial_hash as hash
 from physics_v2 import PARTICLE_COUNT, SMOOTHING_RADIUS, GRAVITY, DESIRED_DENSITY, particle
 class Engine:
     def __init__(self) -> None:
+        self.hash = None
+
         size = np.arange(PARTICLE_COUNT * 3).reshape(PARTICLE_COUNT, 3)
-        self.particle_position_array = np.zeros_like(size, dtype=float)
+        self.particle_position_array = None
         self.particle_list = []
         self.engine_setup()
         self.time_step = self.set_time_step()
 
     def engine_setup(self):
+
+        #  Create Bounding Box
+        self.bounding_box(20)
+
+
+        #  Create Particles
         for i in range(PARTICLE_COUNT):
             particle = p.Particle(mass=(math.pow(SMOOTHING_RADIUS, 3)*(DESIRED_DENSITY)))
             self.particle_list.append(particle)
-            self.particle_position_array[i, :] = particle.get_pos()
         
+        print(len(self.particle_list))
         self.update()
 
+
     def update(self):
+        self.particle_position_array = np.array([p.position for p in self.particle_list])
+        self.hash = cKDTree(self.particle_position_array)
+    
         self.set_time_step()
         self.navier_stokes()
+
 
     def set_time_step(self):
         max_velocity = 1
@@ -30,12 +45,58 @@ class Engine:
         self.time_step = 0.4 * (SMOOTHING_RADIUS / max_velocity)
 
 
+    def bounding_box(self, edge_points):
+        """
+        Create points on the surface of a cube with corners at (-1, -1, -1) and (1, 1, 1).
+
+        Parameters:
+        edge_points (int): Number of points along each edge of the cube.
+
+        Returns:
+        np.array: Array of points on the surface of the cube.
+        """
+        # Ensure that there are at least two points on each edge (the corners)
+        edge_points = max(edge_points, 2)
+        
+        # Linearly spaced points along each edge
+        edge = np.linspace(-1, 1, edge_points)
+        
+        # Points on each face of the cube
+        points = []
+        
+        # Generate points on the top and bottom faces
+        for z in [-1,1]:
+            for x in edge:
+                for y in edge:
+                    points.append([x, y, z])
+                    
+        # Generate points on the front and back faces
+        for x in [-1, 1]:
+            for y in edge[1:-1]:  # Exclude the first and last to avoid duplicating corners
+                for z in edge[1:-1]:  # Exclude the first and last to avoid duplicating corners
+                    points.append([x, y, z])
+                    
+        # Generate points on the left and right faces
+        for y in [-1, 1]:
+            for x in edge[1:-1]:  # Exclude the first and last to avoid duplicating corners
+                for z in edge[1:-1]:  # Exclude the first and last to avoid duplicating corners
+                    points.append([x, y, z])
+
+        for point in points:
+            particle = p.Particle(mass=(math.pow(SMOOTHING_RADIUS, 3)*(DESIRED_DENSITY)), x=point[0], y=point[1], z=point[2], draw=False, move=False)
+            self.particle_list.append(particle)
+
     def navier_stokes(self):
         """
         Lagrange form of Navier-Stokes
         """
         # TODO
         # Find all proximal particles
+        for i in self.particle_list:
+            indices = self.hash.query_ball_point(i.position, SMOOTHING_RADIUS)
+            # print(indices)
+            i.near_particles = [self.particle_list[j] for j in indices]
+
         for i in self.particle_list:
             i.density = self.calc_density(i)
             # print(i.density)
@@ -61,22 +122,22 @@ class Engine:
         grad_pressure_y = 0
         grad_pressure_z = 0
 
-        for j in self.particle_list:
-            if i != j:
-                # Calculate the distance vector and its magnitude
-                distance_vector = i.position - j.position
-                distance = np.linalg.norm(distance_vector)
-                
-                # Calculate normalized direction vector
-                direction_vector = np.divide(distance_vector, distance) if distance != 0 else np.zeros_like(distance_vector)
+        for j in i.near_particles:
 
-                # Calculate the gradient magnitude for this pair
-                grad_magnitude = Engine.influence_grad(distance) * j.mass * ((i.pressure / i.density**2) + (j.pressure / j.density**2))
-                
-                # Accumulate the gradient components
-                grad_pressure_x += grad_magnitude * direction_vector[0, 0]
-                grad_pressure_y += grad_magnitude * direction_vector[0, 1]
-                grad_pressure_z += grad_magnitude * direction_vector[0, 2]
+            # Calculate the distance vector and its magnitude
+            distance_vector = i.position - j.position
+            distance = np.linalg.norm(distance_vector)
+            
+            # Calculate normalized direction vector
+            direction_vector = np.divide(distance_vector, distance) if distance != 0 else np.zeros_like(distance_vector)
+
+            # Calculate the gradient magnitude for this pair
+            grad_magnitude = Engine.influence_grad(distance) * j.mass * ((i.pressure / i.density**2) + (j.pressure / j.density**2))
+            
+            # Accumulate the gradient components
+            grad_pressure_x += grad_magnitude * direction_vector[0]
+            grad_pressure_y += grad_magnitude * direction_vector[1]
+            grad_pressure_z += grad_magnitude * direction_vector[2]
 
         # Scale by -i.mass/i.density
         scale = -(i.mass / i.density)
@@ -92,15 +153,16 @@ class Engine:
 
 
     def calc_other_force(self, i):
-        # return np.array([0,i.mass * GRAVITY,0])
-        return np.array([0, 0, 0])
+        x_force = 0
+        # if i.position[1] < -0.85:
+        #     x_force = i.mass * 90
+        return np.array([x_force,i.mass * GRAVITY,0])
+        # return np.array([0, 0, 0])
 
         
     def calc_density(self, i):
         density = 0
-        for j in self.particle_list:
-            if i == j:
-                continue
+        for j in i.near_particles:
             density += j.mass * Engine.kernal(np.linalg.norm(i.position - j.position))
         return density + 100
 

@@ -1,5 +1,5 @@
-PARTICLE_COUNT = 100
-SMOOTHING_RADIUS = 1  # or smoothing length
-DESIRED_DENSITY = 300  # ρ0
+PARTICLE_COUNT = 430
+SMOOTHING_RADIUS = 0.1  # or smoothing length
+DESIRED_DENSITY = 2.1  # ρ0
 
 GRAVITY = -9.8

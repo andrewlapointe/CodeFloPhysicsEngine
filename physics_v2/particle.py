@@ -1,16 +1,24 @@
 import numpy as np
 
 class Particle:
-    def __init__(self, mass) -> None:
+    def __init__(self, mass, x=None, y=None, z=None, draw=True, move=True) -> None:
         """
         position: np.array(x, y, z)
         """
-        self.position = np.random.rand(1, 3) * 2 - 1
+        if x:
+            self.position = np.array([x,y,z]).reshape(3)
+        else:
+            self.position = np.random.rand(3) * 2 - 1
+        # print(self.position)
+        self.draw = draw
+        self.move = move
         self.velocity = np.array([0,0,0])
+        # print(self.velocity)
         self.mass = mass
         self.density = None
         self.pressure = None
         self.sum_force = None
+        self.near_particles = None
 
         # print(self.position)
 
@@ -26,14 +34,18 @@ class Particle:
         :return: The new position of the particle as a numpy array [x, y, z].
         """
         
-        # Calculate proposed new position
-        new_position = np.add(self.position, delta)
+        if self.move:
+            # Calculate proposed new position
+            new_position = np.add(self.position, delta)
+            
+            # Clamp each coordinate to ensure it stays within the bounding box [-1, 1]
+            new_position_clamped = np.clip(new_position, -1, 1)
+            
+            # Update position
+            self.position = new_position_clamped
         
-        # Clamp each coordinate to ensure it stays within the bounding box [-1, 1]
-        new_position_clamped = np.clip(new_position, -1, 1)
-        
-        # Update position
-        self.position = new_position_clamped
+        else:
+            pass
 
 
     def distance_to(self, particle):
